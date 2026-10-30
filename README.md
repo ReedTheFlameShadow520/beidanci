@@ -141,10 +141,15 @@ docker run --rm -v "$PWD":/home/user/hostcwd kivy/buildozer android debug
 
 ```powershell
 python -m unittest test_core test_sync      # 34 个逻辑/同步测试
-python check_android_static.py              # 安卓兼容性静态检查
+python check_py311.py                       # 全部 .py 是否兼容 Python 3.11（安卓端运行时）
+python check_android_static.py              # 安卓兼容性静态检查（Windows API / sys.platform / 生命周期钩子）
 python check_apk_files.py                   # 按 buildozer.spec 检查哪些文件会进 APK
 python check_android_paths.py               # 模拟没有存储权限时的回退逻辑
 ```
+
+装在平板上以后，**设置页 →「运行自检」** 会当场检查：数据目录是否可写、词库词数、
+今日计划是否正常、音频后端、字体，并把结果写到数据目录的 `诊断.txt`。
+如果应用闪退，同目录会留下 `crash.log`；把这两个文件发我就能定位问题。
 
 ## 界面截图
 

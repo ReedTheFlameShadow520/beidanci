@@ -38,6 +38,11 @@ for name in MOBILE:
 main_src = io.open(ROOT / "main.py", encoding="utf-8").read()
 if "IS_ANDROID" not in main_src:
     problems.append("main.py: 缺少 IS_ANDROID 判断")
+for hook in ("def on_pause", "def on_resume"):
+    if hook not in main_src:
+        problems.append(f"main.py: 缺少 {hook}（Android 切后台会丢数据/不刷新）")
+if "crash.log" not in main_src:
+    problems.append("main.py: 缺少 crash.log 崩溃日志")
 
 print(f"checked {len(MOBILE)} files")
 if problems:

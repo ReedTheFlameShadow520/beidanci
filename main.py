@@ -682,6 +682,11 @@ class SettingsScreen(ScreenBase):
                               size=11, color=COLORS["muted"], size_hint=(1, None),
                               height=dp(20)))
 
+        diag_btn = RoundedButton(text="运行自检（数据目录 / 词库 / 音频）",
+                                 size_hint_y=None, height=dp(46))
+        diag_btn.bind(on_release=lambda *_: app.run_diagnostics())
+        body.add_widget(diag_btn)
+
         sync_btn = RoundedButton(text="立即同步（合并冲突文件）", size_hint_y=None,
                                  height=dp(46))
         sync_btn.bind(on_release=lambda *_: app.sync_now())
@@ -752,6 +757,7 @@ class WordApp(App):
             pass
         Window.clearcolor = COLORS["bg"]
         self._bootstrap()
+        sys.excepthook = self._crash_hook
         self.ensure_plan()
 
         self.sm = ScreenManager(transition=NoTransition())
@@ -1086,6 +1092,74 @@ class WordApp(App):
                 self.store.save()
         except Exception:
             pass
+
+    def on_pause(self):
+        """Android 切到后台（例如去系统设置授权、切到 Syncthing）时保存。"""
+        try:
+            if self.store:
+                self.store.save()
+        except Exception:
+            pass
+        return True
+
+    def on_resume(self):
+        """回到前台时重新读取词库：Syncthing 可能已经在后台把新版本同步过来了。"""
+        if getattr(self, "sm", None) is None:
+            return
+        if self.sm.current not in ("home", "summary"):
+            return
+        try:
+            self.store.load()
+            self.store.sync_from_conflicts()
+            self.ensure_plan()
+            self.home.refresh()
+        except Exception:
+            pass
+
+    def _crash_hook(self, exc_type, exc, tb):
+        try:
+            text = "".join(traceback.format_exception(exc_type, exc, tb))
+            (self.data_dir / "crash.log").write_text(text, encoding="utf-8")
+        except Exception:
+            pass
+        sys.__excepthook__(exc_type, exc, tb)
+
+    def run_diagnostics(self):
+        """平板上的自检：数据目录、词库、计划、音频、字体，结果写文件并弹窗。"""
+        lines = []
+        ok = True
+
+        def add(text, good=True):
+            nonlocal ok
+            lines.append(("✔ " if good else "✘ ") + text)
+            ok = ok and good
+
+        add(f"平台：{kivy_platform} / {getattr(sys, 'platform', '?')}")
+        add(f"设备角色：{self.device}")
+        try:
+            probe = self.data_dir / ".write_probe"
+            probe.write_text("ok", encoding="utf-8")
+            probe.unlink()
+            add(f"数据目录可写：{self.data_dir}")
+        except Exception as exc:
+            add(f"数据目录不可写：{self.data_dir}（{exc}）", False)
+        add(f"词库：{len(self.store.words)} 词")
+        try:
+            self.ensure_plan()
+            add(f"今日计划剩余：{len(self.plan.remaining(self.store, date.today()))} 词")
+        except Exception as exc:
+            add(f"每日计划异常：{exc}", False)
+        add(f"音频后端：{'可用' if self.speaker else '不可用'}", bool(self.speaker))
+        add(f"字体：{FONT}")
+        lines.append("")
+        lines.append("结果：" + ("全部通过" if ok else "发现问题，见上方 ✘"))
+        try:
+            (self.data_dir / "诊断.txt").write_text("\n".join(lines), encoding="utf-8")
+        except Exception:
+            pass
+        popup = make_popup("自检", label("\n".join(lines), size=12), dp(420))
+        popup.open()
+        self._diag_popup = popup
 
     # ---- 键盘 ---------------------------------------------------------- #
 
