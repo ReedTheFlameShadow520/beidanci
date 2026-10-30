@@ -1,4 +1,6 @@
 [app]
+# python-for-android 版本（默认 master 会用 Python 3.14，与 Kivy 2.3.1 不兼容）
+p4a.branch = v2024.01.21
 
 # 应用信息
 title = 背单词
