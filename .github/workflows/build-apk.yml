@@ -27,33 +27,45 @@ jobs:
 
   build:
     needs: preflight
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     timeout-minutes: 150
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 首次构建要下载 Android SDK/NDK（约 2GB），缓存后重跑只要几分钟
-      - name: Cache buildozer global dir
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: System dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git zip unzip openjdk-17-jdk-headless \
+            autoconf automake libtool pkg-config \
+            zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo6 \
+            cmake libffi-dev libssl-dev
+
+      - name: Cache buildozer / pip
         uses: actions/cache@v4
         with:
-          path: ~/.buildozer
+          path: |
+            ~/.buildozer
+            ~/.cache/pip
           key: buildozer-${{ runner.os }}-${{ hashFiles('buildozer.spec') }}
           restore-keys: |
             buildozer-${{ runner.os }}-
 
-      # 用 Kivy 官方 buildozer 镜像。之前用 ArtemSBulgakov/buildozer-action@v1
-      # 失败，原因是它内部自己构建 Docker 镜像时基于 ubuntu:latest（新版本），
-      # openjdk-r PPA 在新 Ubuntu 上已没有 Release 文件，apt update 直接失败。
-      - name: Build APK with Buildozer
+      - name: Install buildozer
         run: |
-          mkdir -p "$HOME/.buildozer"
-          chmod -R 777 "$HOME/.buildozer"
-          docker run --rm -u 0:0 \
-            -v "$PWD":/home/user/hostcwd \
-            -v "$HOME/.buildozer":/home/user/.buildozer \
-            -e HOME=/home/user \
-            kivy/buildozer -v android debug
+          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install buildozer cython==0.29.36
+
+      - name: Build APK
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          buildozer -v android debug
 
       - name: Show APK files
         run: ls -lh bin/ || true
