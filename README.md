@@ -66,6 +66,14 @@ python main.py --csv "G:\point\考研\words.csv"
 > 仓库里还有一个 `tests` 工作流：每次 push 会先跑 34 个单元测试（约 1 分钟）。
 > 构建失败时先看它是否通过，能快速区分是逻辑问题还是打包环境问题。
 
+> 第一次构建常见报错与处理：
+>
+> - `sdkmanager ... licenses`：SDK 许可未接受。buildozer-action 默认会自动接受；偶发网络报错时直接重跑一次即可。
+> - `aapt2` / `build-tools` 找不到：清掉缓存重跑，或在 `buildozer.spec` 里固定 `android.build_tools` 版本。
+> - APK 里报 `No module named 'kivy'`：检查 `requirements = python3,kivy==2.3.1,requests,pyjnius`，等号/逗号都要英文半角。
+> - 构建 90 分钟超时：确认 `source.exclude_dirs` 仍在生效（`screenshots`、`.github`、`bin` 不该被复制）。
+> - Artifacts 里没有 APK：看 build 日志结尾是否 `BUILD SUCCESSFUL` 且 `bin/` 下有 `*.apk`；若文件名不匹配，把上传步骤的 `path` 改成 `bin/*.apk`。
+
 ### 方案 B：本地 Linux / WSL / Docker
 
 ```bash
