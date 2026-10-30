@@ -6,8 +6,29 @@ on:
     branches: [ main, master ]
 
 jobs:
-  build:
+  preflight:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Unit tests and static checks
+        run: |
+          python -m unittest -v test_core test_sync
+          python check_py311.py
+          python check_android_static.py
+          python check_apk_files.py
+
+  build:
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4

@@ -8,6 +8,7 @@ on:
 jobs:
   unit:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -15,6 +16,12 @@ jobs:
         with:
           python-version: "3.11"
 
-      # 纯逻辑测试，不需要 Kivy / Android 环境，几秒就能跑完
+      # Pure logic tests + static checks; no Kivy/Android environment needed (about 15s).
       - name: Run unit tests
         run: python -m unittest -v test_core test_sync
+
+      - name: Static checks
+        run: |
+          python check_py311.py
+          python check_android_static.py
+          python check_apk_files.py
