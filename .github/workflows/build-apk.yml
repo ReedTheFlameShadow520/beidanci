@@ -29,6 +29,9 @@ jobs:
     needs: preflight
     runs-on: ubuntu-22.04
     timeout-minutes: 150
+    env:
+      # Gradle 8 / AGP 8 需要 Java 17；runner 默认 JAVA_HOME 是 Java 11
+      JAVA_HOME: ${{ env.JAVA_HOME_17_X64 }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
